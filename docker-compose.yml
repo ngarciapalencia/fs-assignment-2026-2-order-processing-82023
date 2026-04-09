@@ -1,0 +1,113 @@
+version: "3.9"
+
+services:
+  rabbitmq:
+    image: rabbitmq:3-management
+    container_name: rabbitmq
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    environment:
+      RABBITMQ_DEFAULT_USER: guest
+      RABBITMQ_DEFAULT_PASS: guest
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - sportsstore-net
+
+  order-api:
+    build:
+      context: .
+      dockerfile: OrderManagement.API/Dockerfile
+    container_name: order-api
+    ports:
+      - "5001:8080"
+    environment:
+      ASPNETCORE_ENVIRONMENT: Production
+      ConnectionStrings__OrderDb: "Data Source=/data/orders.db"
+      RabbitMQ__Host: rabbitmq
+    volumes:
+      - order-data:/data
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+    networks:
+      - sportsstore-net
+
+  inventory-service:
+    build:
+      context: .
+      dockerfile: InventoryService/Dockerfile
+    container_name: inventory-service
+    environment:
+      RabbitMQ__Host: rabbitmq
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+    networks:
+      - sportsstore-net
+
+  payment-service:
+    build:
+      context: .
+      dockerfile: PaymentService/Dockerfile
+    container_name: payment-service
+    environment:
+      RabbitMQ__Host: rabbitmq
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+    networks:
+      - sportsstore-net
+
+  shipping-service:
+    build:
+      context: .
+      dockerfile: ShippingService/Dockerfile
+    container_name: shipping-service
+    environment:
+      RabbitMQ__Host: rabbitmq
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+    networks:
+      - sportsstore-net
+
+  customer-portal:
+    build:
+      context: .
+      dockerfile: CustomerPortal.Blazor/Dockerfile
+    container_name: customer-portal
+    ports:
+      - "5002:8080"
+    environment:
+      ASPNETCORE_ENVIRONMENT: Production
+      OrderApiUrl: "http://order-api:8080"
+    depends_on:
+      - order-api
+    networks:
+      - sportsstore-net
+
+  admin-dashboard:
+    build:
+      context: AdminDashboard.React
+      dockerfile: Dockerfile
+    container_name: admin-dashboard
+    ports:
+      - "3000:80"
+    environment:
+      REACT_APP_API_URL: "http://localhost:5001"
+    depends_on:
+      - order-api
+    networks:
+      - sportsstore-net
+
+networks:
+  sportsstore-net:
+    driver: bridge
+
+volumes:
+  order-data:

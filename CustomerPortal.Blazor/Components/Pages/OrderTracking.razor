@@ -1,0 +1,90 @@
+@page "/order-tracking/{OrderId:guid}"
+@inject OrderApiService Api
+@inject NavigationManager Nav
+
+<PageTitle>Order Tracking - SportsStore</PageTitle>
+
+<a href="/orders" class="btn btn-outline-secondary btn-sm mb-4">← Back to Orders</a>
+
+@if (_order == null && _loading)
+{
+    <div class="text-center py-5"><div class="spinner-border text-primary"></div></div>
+}
+else if (_order == null)
+{
+    <div class="alert alert-warning">Order not found.</div>
+}
+else
+{
+    <div class="row g-4">
+        <div class="col-md-8">
+            <div class="card shadow-sm">
+                <div class="card-header d-flex justify-content-between align-items-center bg-dark text-white">
+                    <strong>Order @_order.Id.ToString()[..8]…</strong>
+                    <span class="badge @GetBadgeClass(_order.Status) fs-6">@_order.Status</span>
+                </div>
+                <div class="card-body">
+                    <div class="row mb-3">
+                        <div class="col-sm-6">
+                            <p class="mb-1"><strong>Customer:</strong> @_order.CustomerName</p>
+                            <p class="mb-1"><strong>Placed:</strong> @_order.CreatedAt.ToString("dd MMM yyyy HH:mm")</p>
+                        </div>
+                        <div class="col-sm-6">
+                            @if (!string.IsNullOrEmpty(_order.TrackingNumber))
+                            {
+                                <p class="mb-1"><strong>Tracking:</strong> <span class="text-success fw-bold">@_order.TrackingNumber</span></p>
+                            }
+                            @if (_order.EstimatedDispatch.HasValue)
+                            {
+                                <p class="mb-1"><strong>Est. Dispatch:</strong> @_order.EstimatedDispatch.Value.ToString("dd MMM yyyy")</p>
+                            }
+                        </div>
+                    </div>
+
+                    @if (!string.IsNullOrEmpty(_order.FailureReason))
+                    {
+                        <div class="alert alert-danger">❌ <strong>Failure reason:</strong> @_order.FailureReason</div>
+                    }
+
+                    <h6 class="mt-3">Items</h6>
+                    <table class="table table-sm">
+                        <thead><tr><th>Product</th><th class="text-center">Qty</th><th class="text-end">Price</th><th class="text-end">Total</th></tr></thead>
+                        <tbody>
+                            @foreach (var item in _order.Items)
+                            {
+                                <tr>
+                                    <td>@item.ProductName</td>
+                                    <td class="text-center">@item.Quantity</td>
+                                    <td class="text-end">€@item.UnitPrice.ToString("F2")</td>
+                                    <td class="text-end">€@item.LineTotal.ToString("F2")</td>
+                                </tr>
+                            }
+                        </tbody>
+                        <tfoot>
+                            <tr class="table-light"><td colspan="3" class="text-end fw-bold">Total</td><td class="text-end fw-bold text-success">€@_order.TotalAmount.ToString("F2")</td></tr>
+                        </tfoot>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    [Parameter] public Guid OrderId { get; set; }
+    private OrderDto? _order;
+    private bool _loading = true;
+
+    protected override async Task OnInitializedAsync()
+    {
+        _order = await Api.GetOrderAsync(OrderId);
+        _loading = false;
+    }
+
+    private static string GetBadgeClass(string status) => status switch
+    {
+        "Completed" => "bg-success",
+        "Failed" or "InventoryFailed" or "PaymentFailed" => "bg-danger",
+        _ => "bg-warning text-dark"
+    };
+}

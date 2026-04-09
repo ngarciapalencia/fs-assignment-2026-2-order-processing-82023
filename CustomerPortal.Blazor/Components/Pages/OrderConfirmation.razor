@@ -1,0 +1,108 @@
+@page "/order-confirmation/{OrderId:guid}"
+@inject OrderApiService Api
+@implements IDisposable
+
+<PageTitle>Order Confirmation - SportsStore</PageTitle>
+
+<div class="text-center mb-4">
+    <h2>🎉 Order Placed!</h2>
+    <p class="text-muted">Your order is being processed. Live status updates below.</p>
+    <p><strong>Order ID:</strong> <code>@OrderId</code></p>
+</div>
+
+@if (_status != null)
+{
+    <div class="card shadow-sm mx-auto" style="max-width:600px">
+        <div class="card-body text-center">
+            <div class="mb-3">
+                @GetStatusIcon(_status.Status)
+                <h4 class="mt-2">@_status.Status</h4>
+            </div>
+            @if (!string.IsNullOrEmpty(_status.FailureReason))
+            {
+                <div class="alert alert-danger">❌ @_status.FailureReason</div>
+            }
+            @if (!string.IsNullOrEmpty(_status.TrackingNumber))
+            {
+                <div class="alert alert-success">📬 Tracking: <strong>@_status.TrackingNumber</strong></div>
+            }
+            <div class="progress mt-3" style="height:20px">
+                <div class="progress-bar bg-success progress-bar-striped @(_isProcessing ? "progress-bar-animated" : "")"
+                     style="width:@GetProgress(_status.Status)%">
+                    @GetProgress(_status.Status)%
+                </div>
+            </div>
+            <p class="text-muted small mt-2">
+                @(_isProcessing ? "Processing — refreshing every 3 seconds..." : "Processing complete.")
+            </p>
+        </div>
+    </div>
+}
+else
+{
+    <div class="text-center"><div class="spinner-border text-primary"></div></div>
+}
+
+<div class="text-center mt-4">
+    <a href="/orders" class="btn btn-outline-primary me-2">View All Orders</a>
+    <a href="/" class="btn btn-primary">Continue Shopping</a>
+</div>
+
+@code {
+    [Parameter] public Guid OrderId { get; set; }
+    private OrderStatusDto? _status;
+    private bool _isProcessing = true;
+    private System.Threading.Timer? _pollTimer;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await RefreshStatus();
+        _pollTimer = new System.Threading.Timer(async _ =>
+        {
+            await RefreshStatus();
+            await InvokeAsync(StateHasChanged);
+        }, null, 3000, 3000);
+    }
+
+    private async Task RefreshStatus()
+    {
+        _status = await Api.GetOrderStatusAsync(OrderId);
+        if (_status != null)
+        {
+            var terminal = new[] { "Completed", "Failed", "InventoryFailed", "PaymentFailed" };
+            _isProcessing = !terminal.Contains(_status.Status);
+            if (!_isProcessing) _pollTimer?.Change(Timeout.Infinite, Timeout.Infinite);
+        }
+    }
+
+    private static string GetStatusIcon(string status) => status switch
+    {
+        "Submitted" => "🔄",
+        "InventoryPending" => "📦",
+        "InventoryConfirmed" => "✅",
+        "InventoryFailed" => "❌",
+        "PaymentPending" => "💳",
+        "PaymentApproved" => "✅",
+        "PaymentFailed" => "❌",
+        "ShippingPending" => "🚚",
+        "ShippingCreated" => "📬",
+        "Completed" => "🎉",
+        "Failed" => "❌",
+        _ => "🔄"
+    };
+
+    private static int GetProgress(string status) => status switch
+    {
+        "Submitted" => 10,
+        "InventoryPending" => 25,
+        "InventoryConfirmed" => 40,
+        "PaymentPending" => 55,
+        "PaymentApproved" => 70,
+        "ShippingPending" => 85,
+        "ShippingCreated" or "Completed" => 100,
+        "InventoryFailed" or "PaymentFailed" or "Failed" => 100,
+        _ => 5
+    };
+
+    public void Dispose() => _pollTimer?.Dispose();
+}

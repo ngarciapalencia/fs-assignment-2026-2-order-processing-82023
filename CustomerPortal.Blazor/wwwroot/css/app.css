@@ -1,0 +1,23 @@
+/* SportsStore Customer Portal */
+body {
+    background-color: #f8f9fa;
+}
+
+.card {
+    border-radius: 0.5rem;
+}
+
+.navbar-brand {
+    font-size: 1.4rem;
+    letter-spacing: 0.5px;
+}
+
+.toast {
+    min-width: 250px;
+}
+
+/* Progress bar label */
+.progress-bar {
+    font-size: 0.75rem;
+    font-weight: 600;
+}

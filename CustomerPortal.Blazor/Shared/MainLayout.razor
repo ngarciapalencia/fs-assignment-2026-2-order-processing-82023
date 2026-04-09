@@ -1,0 +1,38 @@
+@inherits LayoutComponentBase
+@inject CustomerPortal.Blazor.Services.CartService Cart
+@inject NavigationManager Nav
+@implements IDisposable
+
+<div class="container-fluid">
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark mb-4">
+        <div class="container">
+            <a class="navbar-brand fw-bold" href="/">🏆 SportsStore</a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav me-auto">
+                    <li class="nav-item"><a class="nav-link" href="/">Products</a></li>
+                    <li class="nav-item"><a class="nav-link" href="/orders">My Orders</a></li>
+                </ul>
+                <a href="/cart" class="btn btn-outline-light position-relative">
+                    🛒 Cart
+                    @if (Cart.Count > 0)
+                    {
+                        <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger">
+                            @Cart.Count
+                        </span>
+                    }
+                </a>
+            </div>
+        </div>
+    </nav>
+    <div class="container">
+        @Body
+    </div>
+</div>
+
+@code {
+    protected override void OnInitialized() => Cart.OnChange += StateHasChanged;
+    public void Dispose() => Cart.OnChange -= StateHasChanged;
+}

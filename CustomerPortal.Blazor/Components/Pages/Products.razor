@@ -1,0 +1,102 @@
+@page "/"
+@inject OrderApiService Api
+@inject CartService Cart
+
+<PageTitle>Products - SportsStore</PageTitle>
+
+<h2 class="mb-4">🏅 Products</h2>
+
+@if (_loading)
+{
+    <div class="text-center py-5"><div class="spinner-border text-primary"></div><p class="mt-2">Loading products...</p></div>
+}
+else if (!string.IsNullOrEmpty(_error))
+{
+    <div class="alert alert-danger">@_error</div>
+}
+else
+{
+    <!-- Category filter -->
+    <div class="mb-3">
+        @foreach (var cat in _categories)
+        {
+            <button class="btn btn-sm me-2 mb-2 @(_selectedCategory == cat ? "btn-dark" : "btn-outline-secondary")"
+                    @onclick="() => _selectedCategory = cat">@cat</button>
+        }
+    </div>
+
+    <div class="row row-cols-1 row-cols-md-3 g-4">
+        @foreach (var p in FilteredProducts)
+        {
+            <div class="col">
+                <div class="card h-100 shadow-sm">
+                    <div class="card-body">
+                        <span class="badge bg-secondary mb-2">@p.Category</span>
+                        <h5 class="card-title">@p.Name</h5>
+                        <p class="card-text text-muted small">@p.Description</p>
+                        <p class="fw-bold text-success fs-5">€@p.Price.ToString("F2")</p>
+                        <p class="text-muted small">Stock: @p.StockQuantity</p>
+                    </div>
+                    <div class="card-footer d-flex gap-2">
+                        <input type="number" class="form-control form-control-sm w-25" min="1" max="@p.StockQuantity"
+                               @bind="_quantities[p.ProductId]" />
+                        <button class="btn btn-primary btn-sm flex-grow-1"
+                                @onclick="() => AddToCart(p)"
+                                disabled="@(p.StockQuantity == 0)">
+                            @(p.StockQuantity == 0 ? "Out of Stock" : "Add to Cart")
+                        </button>
+                    </div>
+                </div>
+            </div>
+        }
+    </div>
+}
+
+@if (_toastMessage != null)
+{
+    <div class="position-fixed bottom-0 end-0 p-3" style="z-index:1100">
+        <div class="toast show bg-success text-white">
+            <div class="toast-body">✅ @_toastMessage</div>
+        </div>
+    </div>
+}
+
+@code {
+    private List<ProductDto> _products = new();
+    private Dictionary<long, int> _quantities = new();
+    private string _selectedCategory = "All";
+    private List<string> _categories = new();
+    private bool _loading = true;
+    private string? _error;
+    private string? _toastMessage;
+    private System.Threading.Timer? _toastTimer;
+
+    private IEnumerable<ProductDto> FilteredProducts =>
+        _selectedCategory == "All" ? _products : _products.Where(p => p.Category == _selectedCategory);
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            _products = await Api.GetProductsAsync();
+            _quantities = _products.ToDictionary(p => p.ProductId, _ => 1);
+            _categories = new[] { "All" }.Concat(_products.Select(p => p.Category).Distinct().OrderBy(c => c)).ToList();
+        }
+        catch { _error = "Could not load products. Is the Order API running?"; }
+        finally { _loading = false; }
+    }
+
+    private void AddToCart(ProductDto product)
+    {
+        var qty = _quantities.GetValueOrDefault(product.ProductId, 1);
+        Cart.AddItem(product, qty);
+        ShowToast($"{product.Name} (x{qty}) added to cart!");
+    }
+
+    private void ShowToast(string message)
+    {
+        _toastMessage = message;
+        _toastTimer?.Dispose();
+        _toastTimer = new System.Threading.Timer(_ => InvokeAsync(() => { _toastMessage = null; StateHasChanged(); }), null, 2500, -1);
+    }
+}

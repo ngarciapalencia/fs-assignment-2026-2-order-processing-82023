@@ -1,0 +1,68 @@
+@page "/orders"
+@inject OrderApiService Api
+
+<PageTitle>My Orders - SportsStore</PageTitle>
+
+<h2 class="mb-4">📋 My Orders</h2>
+
+@if (_loading)
+{
+    <div class="text-center py-5"><div class="spinner-border text-primary"></div></div>
+}
+else if (!_orders.Any())
+{
+    <div class="text-center py-5">
+        <p class="text-muted">No orders yet.</p>
+        <a href="/" class="btn btn-primary">Start Shopping</a>
+    </div>
+}
+else
+{
+    <div class="table-responsive">
+        <table class="table table-hover align-middle">
+            <thead class="table-dark">
+                <tr>
+                    <th>Order ID</th>
+                    <th>Date</th>
+                    <th>Items</th>
+                    <th class="text-end">Total</th>
+                    <th class="text-center">Status</th>
+                    <th>Tracking</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var o in _orders)
+                {
+                    <tr @onclick="() => Nav.NavigateTo($\"/order-tracking/{o.Id}\")" style="cursor:pointer">
+                        <td><code class="small">@o.Id.ToString()[..8]…</code></td>
+                        <td class="small text-muted">@o.CreatedAt.ToString("dd MMM yyyy HH:mm")</td>
+                        <td>@o.Items.Sum(i => i.Quantity) item(s)</td>
+                        <td class="text-end fw-bold">€@o.TotalAmount.ToString("F2")</td>
+                        <td class="text-center"><span class="badge @GetBadgeClass(o.Status)">@o.Status</span></td>
+                        <td class="small">@(o.TrackingNumber ?? "—")</td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+}
+
+@inject NavigationManager Nav
+@code {
+    private List<OrderDto> _orders = new();
+    private bool _loading = true;
+
+    protected override async Task OnInitializedAsync()
+    {
+        _orders = await Api.GetCustomerOrdersAsync("customer-1");
+        _loading = false;
+    }
+
+    private static string GetBadgeClass(string status) => status switch
+    {
+        "Completed" => "bg-success",
+        "Failed" or "InventoryFailed" or "PaymentFailed" => "bg-danger",
+        "Submitted" or "InventoryPending" or "PaymentPending" or "ShippingPending" => "bg-warning text-dark",
+        _ => "bg-secondary"
+    };
+}

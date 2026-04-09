@@ -1,0 +1,126 @@
+@page "/checkout"
+@inject CartService Cart
+@inject OrderApiService Api
+@inject NavigationManager Nav
+
+<PageTitle>Checkout - SportsStore</PageTitle>
+
+<h2 class="mb-4">📦 Checkout</h2>
+
+@if (!Cart.Items.Any())
+{
+    <div class="alert alert-warning">Your cart is empty. <a href="/">Go shopping</a>.</div>
+}
+else
+{
+    <div class="row g-4">
+        <div class="col-md-7">
+            <div class="card shadow-sm">
+                <div class="card-header bg-dark text-white"><strong>Delivery Details</strong></div>
+                <div class="card-body">
+                    @if (_errorMessage != null)
+                    {
+                        <div class="alert alert-danger">@_errorMessage</div>
+                    }
+                    <div class="mb-3">
+                        <label class="form-label">Full Name *</label>
+                        <input class="form-control @(_submitted && string.IsNullOrWhiteSpace(_name) ? "is-invalid" : "")"
+                               @bind="_name" placeholder="John Smith" />
+                        <div class="invalid-feedback">Name is required.</div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Email *</label>
+                        <input type="email" class="form-control @(_submitted && string.IsNullOrWhiteSpace(_email) ? "is-invalid" : "")"
+                               @bind="_email" placeholder="john@example.com" />
+                        <div class="invalid-feedback">Email is required.</div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Shipping Address *</label>
+                        <textarea class="form-control @(_submitted && string.IsNullOrWhiteSpace(_address) ? "is-invalid" : "")"
+                                  rows="3" @bind="_address" placeholder="123 Main St, Dublin, Ireland"></textarea>
+                        <div class="invalid-feedback">Address is required.</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-5">
+            <div class="card shadow-sm">
+                <div class="card-header bg-dark text-white"><strong>Order Summary</strong></div>
+                <div class="card-body p-0">
+                    <ul class="list-group list-group-flush">
+                        @foreach (var item in Cart.Items)
+                        {
+                            <li class="list-group-item d-flex justify-content-between">
+                                <span>@item.ProductName <span class="text-muted">x@item.Quantity</span></span>
+                                <strong>€@item.LineTotal.ToString("F2")</strong>
+                            </li>
+                        }
+                        <li class="list-group-item d-flex justify-content-between bg-light">
+                            <strong>Total</strong>
+                            <strong class="text-success">€@Cart.Total.ToString("F2")</strong>
+                        </li>
+                    </ul>
+                </div>
+                <div class="card-footer">
+                    <button class="btn btn-success w-100 btn-lg" @onclick="PlaceOrder" disabled="@_placing">
+                        @if (_placing)
+                        {
+                            <span class="spinner-border spinner-border-sm me-2"></span><span>Placing Order...</span>
+                        }
+                        else
+                        {
+                            <span>✅ Place Order</span>
+                        }
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    private string _name = string.Empty;
+    private string _email = string.Empty;
+    private string _address = string.Empty;
+    private bool _placing = false;
+    private bool _submitted = false;
+    private string? _errorMessage;
+
+    private async Task PlaceOrder()
+    {
+        _submitted = true;
+        if (string.IsNullOrWhiteSpace(_name) || string.IsNullOrWhiteSpace(_email) || string.IsNullOrWhiteSpace(_address))
+            return;
+
+        _placing = true;
+        _errorMessage = null;
+
+        var request = new CheckoutRequest
+        {
+            CustomerId = "customer-1",
+            CustomerName = _name,
+            CustomerEmail = _email,
+            ShippingAddress = _address,
+            Items = Cart.Items.Select(i => new CartItemRequest
+            {
+                ProductId = i.ProductId,
+                ProductName = i.ProductName,
+                Quantity = i.Quantity,
+                UnitPrice = i.UnitPrice
+            }).ToList()
+        };
+
+        var order = await Api.CheckoutAsync(request);
+        if (order != null)
+        {
+            Cart.Clear();
+            Nav.NavigateTo($"/order-confirmation/{order.Id}");
+        }
+        else
+        {
+            _errorMessage = "Failed to place order. Please check the API is running.";
+            _placing = false;
+        }
+    }
+}
