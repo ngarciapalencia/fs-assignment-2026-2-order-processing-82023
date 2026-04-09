@@ -63,8 +63,13 @@ public record ShipmentRecordDto(
     DateTime CreatedAt
 );
 
-public record OrderStatusDto(Guid OrderId, string Status, string? FailureReason, string? TrackingNumber);
-
+public class OrderStatusDto
+{
+    public Guid OrderId { get; set; }
+    public string Status { get; set; } = string.Empty;
+    public string? FailureReason { get; set; }
+    public string? TrackingNumber { get; set; }
+}
 public record ProductDto(long ProductId, string Name, string Description, decimal Price, string Category, int StockQuantity);
 
 public record DashboardSummaryDto(

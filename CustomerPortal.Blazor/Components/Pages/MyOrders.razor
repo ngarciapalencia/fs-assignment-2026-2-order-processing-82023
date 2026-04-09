@@ -1,5 +1,6 @@
 @page "/orders"
 @inject OrderApiService Api
+@inject NavigationManager Nav
 
 <PageTitle>My Orders - SportsStore</PageTitle>
 
@@ -33,13 +34,14 @@ else
             <tbody>
                 @foreach (var o in _orders)
                 {
-                    <tr @onclick="() => Nav.NavigateTo($\"/order-tracking/{o.Id}\")" style="cursor:pointer">
-                        <td><code class="small">@o.Id.ToString()[..8]…</code></td>
+                    var orderId = o.Id;
+                    <tr @onclick="() => GoToOrder(orderId)" style="cursor:pointer">
+                        <td><code class="small">@o.Id.ToString()[..8]...</code></td>
                         <td class="small text-muted">@o.CreatedAt.ToString("dd MMM yyyy HH:mm")</td>
                         <td>@o.Items.Sum(i => i.Quantity) item(s)</td>
-                        <td class="text-end fw-bold">€@o.TotalAmount.ToString("F2")</td>
+                        <td class="text-end fw-bold">@o.TotalAmount.ToString("C")</td>
                         <td class="text-center"><span class="badge @GetBadgeClass(o.Status)">@o.Status</span></td>
-                        <td class="small">@(o.TrackingNumber ?? "—")</td>
+                        <td class="small">@(o.TrackingNumber ?? "-")</td>
                     </tr>
                 }
             </tbody>
@@ -47,7 +49,6 @@ else
     </div>
 }
 
-@inject NavigationManager Nav
 @code {
     private List<OrderDto> _orders = new();
     private bool _loading = true;
@@ -57,6 +58,8 @@ else
         _orders = await Api.GetCustomerOrdersAsync("customer-1");
         _loading = false;
     }
+
+    private void GoToOrder(Guid id) => Nav.NavigateTo($"/order-tracking/{id}");
 
     private static string GetBadgeClass(string status) => status switch
     {

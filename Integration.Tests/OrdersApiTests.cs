@@ -131,15 +131,15 @@ public class OrdersApiTests : IClassFixture<OrderApiFactory>
     public async Task GetCustomerOrders_ReturnsOnlyThatCustomersOrders()
     {
         await _client.PostAsJsonAsync("/api/orders/checkout", new CheckoutRequest(
-            "customer-special", "Special", "s@t.com", "Addr",
+            "customer-1", "Special", "s@t.com", "Addr",
             new List<CartItemRequest> { new(1, "Kayak", 1, 275m) }
         ));
 
-        var response = await _client.GetAsync("/api/customers/customer-special/orders");
+        var response = await _client.GetAsync("/api/customers/customer-1/orders");
         response.EnsureSuccessStatusCode();
         var orders = await response.Content.ReadFromJsonAsync<List<OrderDto>>();
         Assert.NotNull(orders);
-        Assert.All(orders, o => Assert.Equal("customer-special", o.CustomerId));
+        Assert.All(orders, o => Assert.Equal("customer-1", o.CustomerId));
     }
 
     [Fact]

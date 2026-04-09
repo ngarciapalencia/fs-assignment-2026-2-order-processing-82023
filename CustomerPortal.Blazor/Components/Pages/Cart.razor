@@ -1,12 +1,12 @@
 @page "/cart"
-@inject CartService Cart
+@inject CartService CartSvc
 @inject NavigationManager Nav
 
-<PageTitle>Cart - SportsStore</PageTitle>
+<PageTitle>CartSvc - SportsStore</PageTitle>
 
-<h2 class="mb-4">🛒 Shopping Cart</h2>
+<h2 class="mb-4">🛒 Shopping CartSvc</h2>
 
-@if (!Cart.Items.Any())
+@if (!CartSvc.Items.Any())
 {
     <div class="text-center py-5">
         <p class="text-muted fs-5">Your cart is empty.</p>
@@ -27,7 +27,7 @@ else
                 </tr>
             </thead>
             <tbody>
-                @foreach (var item in Cart.Items)
+                @foreach (var item in CartSvc.Items)
                 {
                     <tr>
                         <td class="fw-semibold">@item.ProductName</td>
@@ -39,7 +39,7 @@ else
                         <td class="text-end">€@item.UnitPrice.ToString("F2")</td>
                         <td class="text-end fw-bold">€@item.LineTotal.ToString("F2")</td>
                         <td class="text-end">
-                            <button class="btn btn-outline-danger btn-sm" @onclick="() => Cart.RemoveItem(item.ProductId)">✕</button>
+                            <button class="btn btn-outline-danger btn-sm" @onclick="() => CartSvc.RemoveItem(item.ProductId)">✕</button>
                         </td>
                     </tr>
                 }
@@ -47,7 +47,7 @@ else
             <tfoot>
                 <tr class="table-light">
                     <td colspan="3" class="text-end fw-bold fs-5">Total:</td>
-                    <td class="text-end fw-bold fs-5 text-success">€@Cart.Total.ToString("F2")</td>
+                    <td class="text-end fw-bold fs-5 text-success">€@CartSvc.Total.ToString("F2")</td>
                     <td></td>
                 </tr>
             </tfoot>
@@ -55,11 +55,11 @@ else
     </div>
 
     <div class="d-flex justify-content-between mt-3">
-        <button class="btn btn-outline-secondary" @onclick="Cart.Clear">Clear Cart</button>
+        <button class="btn btn-outline-secondary" @onclick="CartSvc.Clear">Clear Cart</button>
         <a href="/checkout" class="btn btn-success btn-lg">Proceed to Checkout →</a>
     </div>
 }
 
 @code {
-    private void UpdateQty(long productId, int qty) => Cart.UpdateQuantity(productId, qty);
+    private void UpdateQty(long productId, int qty) => CartSvc.UpdateQuantity(productId, qty);
 }
